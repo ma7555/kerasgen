@@ -6,12 +6,9 @@ from setuptools import find_packages
 from setuptools import setup
 
 
-def read(filename):
-    filename = os.path.join(os.path.dirname(__file__), filename)
-    text_type = type(u"")
-    with io.open(filename, mode="r", encoding='utf-8') as fd:
-        return re.sub(text_type(r':[a-z]+:`~?(.*?)`'), text_type(r'``\1``'), fd.read())
-
+# read the contents of your README file
+from pathlib import Path
+this_directory = Path(__file__).parent
 
 setup(
     name="kerasgen",
@@ -23,7 +20,8 @@ setup(
     author_email="mah.alaa@nu.edu.eg",
 
     description="A Keras/Tensorflow compatible image data generator for creating balanced batches",
-    long_description=read("README.rst"),
+    long_description = (this_directory / "README.md").read_text(),
+    long_description_content_type='text/markdown',
 
     packages=find_packages(exclude=('tests',)),
 

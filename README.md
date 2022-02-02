@@ -1,7 +1,6 @@
 kerasgen
 ========
 [![Latest PyPI version](https://img.shields.io/pypi/v/kerasgen.svg)](https://pypi.python.org/pypi/kerasgen)
-[![Latest Travis CI build status](https://travis-ci.org/ma7555/kerasgen.png)](https://travis-ci.org/ma7555/kerasgen)
 
 A Keras/Tensorflow compatible image data generator for creating balanced batches.
 This datagenerator is compatible with TripletLoss as it guarantees the existence of postive pairs in every batch.
