@@ -4,9 +4,9 @@ import tensorflow.compat.v2 as tf
 # pylint: disable=g-classes-have-attributes
 
 import numpy as np
-from tensorflow.python.keras.layers.preprocessing import image_preprocessing
-from tensorflow.python.keras.preprocessing import dataset_utils
-from tensorflow.python.keras.preprocessing import image as keras_image_ops
+from keras.layers.preprocessing import image_preprocessing
+from keras.preprocessing import dataset_utils
+from keras.preprocessing import image as keras_image_ops
 from numpy.random import default_rng
 from tensorflow.python.platform import tf_logging as logging
 

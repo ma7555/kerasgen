@@ -12,7 +12,7 @@ this_directory = Path(__file__).parent
 
 setup(
     name="kerasgen",
-    version="0.1.1",
+    version="0.1.2",
     url="https://github.com/ma7555/kerasgen",
     license='MIT',
 
