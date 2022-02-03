@@ -1,6 +1,7 @@
 kerasgen
 ========
 [![Latest PyPI version](https://img.shields.io/pypi/v/kerasgen.svg)](https://pypi.python.org/pypi/kerasgen)
+[![DOI](https://zenodo.org/badge/454812299.svg)](https://zenodo.org/badge/latestdoi/454812299)
 
 A Keras/Tensorflow compatible image data generator for creating balanced batches.
 This datagenerator is compatible with TripletLoss as it guarantees the existence of postive pairs in every batch.
@@ -81,5 +82,6 @@ MIT
 Authors
 -------
 
-`kerasgen` was written by [Mahmoud Bahaa](mailto:mah.alaa@nu.edu.eg?subject=[GitHub]%20KerasGen%20Support)
+`KerasGen` was written by [Mahmoud Bahaa](mailto:mah.alaa@nu.edu.eg?subject=[GitHub]%20KerasGen%20Support)
 
+If you use this software, please cite it using the metadata from this `CITATION.cff`
