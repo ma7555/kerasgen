@@ -1,37 +1,39 @@
 """Keras balanced image dataset loading utilities."""
 
-import tensorflow.compat.v2 as tf
+import tensorflow as tf
+
 # pylint: disable=g-classes-have-attributes
 
 import numpy as np
-from keras.layers.preprocessing import image_preprocessing
-from keras.preprocessing import dataset_utils
-from keras.preprocessing import image as keras_image_ops
+from keras.utils import dataset_utils, image_utils
+from tensorflow.keras.preprocessing import image as keras_image_ops
 from numpy.random import default_rng
 from tensorflow.python.platform import tf_logging as logging
 
-ALLOWLIST_FORMATS = ('.bmp', '.gif', '.jpeg', '.jpg', '.png')
+ALLOWLIST_FORMATS = (".bmp", ".gif", ".jpeg", ".jpg", ".png")
 
 
-def balanced_image_dataset_from_directory(directory,
-                                 num_classes_per_batch=2, 
-                                 num_images_per_class=16,
-                                 labels='inferred',
-                                 label_mode='int',
-                                 class_names=None,
-                                 color_mode='rgb',
-                                 image_size=(256, 256),
-                                 shuffle=True,
-                                 seed=None,
-                                 validation_split=None,
-                                 subset=None,
-                                 safe_triplet=False,
-                                 samples_per_epoch=None,
-                                 interpolation='bilinear',
-                                 follow_links=False,
-                                 crop_to_aspect_ratio=False,
-                                 **kwargs):
-  """Generates a balanced per batch `tf.data.Dataset` from image files in a directory.
+def balanced_image_dataset_from_directory(
+    directory,
+    num_classes_per_batch=2,
+    num_images_per_class=16,
+    labels="inferred",
+    label_mode="int",
+    class_names=None,
+    color_mode="rgb",
+    image_size=(256, 256),
+    shuffle=True,
+    seed=None,
+    validation_split=None,
+    subset=None,
+    safe_triplet=False,
+    samples_per_epoch=None,
+    interpolation="bilinear",
+    follow_links=False,
+    crop_to_aspect_ratio=False,
+    **kwargs,
+):
+    """Generates a balanced per batch `tf.data.Dataset` from image files in a directory.
 
   If your directory structure is:
 
@@ -162,210 +164,238 @@ def balanced_image_dataset_from_directory(directory,
     - Only valid when safe_triplet is True
     - Must be divisible by batch_size
   """
-  if 'smart_resize' in kwargs:
-    crop_to_aspect_ratio = kwargs.pop('smart_resize')
-  if kwargs:
-    raise TypeError(f'Unknown keywords argument(s): {tuple(kwargs.keys())}')
-  if labels not in ('inferred', None):
-    if not isinstance(labels, (list, tuple)):
-      raise ValueError(
-          '`labels` argument should be a list/tuple of integer labels, of '
-          'the same size as the number of image files in the target '
-          'directory. If you wish to infer the labels from the subdirectory '
-          'names in the target directory, pass `labels="inferred"`. '
-          'If you wish to get a dataset that only contains images '
-          f'(no labels), pass `labels=None`. Received: labels={labels}')
-    if class_names:
-      raise ValueError('You can only pass `class_names` if '
-                       f'`labels="inferred"`. Received: labels={labels}, and '
-                       f'class_names={class_names}')
-  if label_mode not in {'int', 'categorical', 'binary', None}:
-    raise ValueError(
-        '`label_mode` argument must be one of "int", "categorical", "binary", '
-        f'or None. Received: label_mode={label_mode}')
-  if labels is None or label_mode is None:
-    labels = 'inferred'
-    label_mode = None
-    logging.warning(
-      'Passing `labels=None` or `label_mode=None` will ignore all images '
-      'not associated with a label. If you want to generate all images '
-      'regardless of their labels please use '
-      'keras.preprocessing.image_dataset_from_directory instead.'
-    )
-  if color_mode == 'rgb':
-    num_channels = 3
-  elif color_mode == 'rgba':
-    num_channels = 4
-  elif color_mode == 'grayscale':
-    num_channels = 1
-  else:
-    raise ValueError(
-        '`color_mode` must be one of {"rgb", "rgba", "grayscale"}. '
-        f'Received: color_mode={color_mode}')
-  interpolation = image_preprocessing.get_interpolation(interpolation)
-  dataset_utils.check_validation_split_arg(
-      validation_split, subset, shuffle, seed)
-
-  if seed is None:
-    seed = np.random.randint(1e6)
-  image_paths, labels, class_names = dataset_utils.index_directory(
-      directory,
-      labels,
-      formats=ALLOWLIST_FORMATS,
-      class_names=class_names,
-      shuffle=shuffle,
-      seed=seed,
-      follow_links=follow_links)
-
-  if label_mode == 'binary' and len(class_names) != 2:
-    raise ValueError(
-        f'When passing `label_mode="binary"`, there must be exactly 2 '
-        f'class_names. Received: class_names={class_names}')
-
-  batch_size = int(num_classes_per_batch * num_images_per_class)
-  if not safe_triplet:
-    if samples_per_epoch is not None:
-      raise ValueError(
-        f'You can only pass `samples_per_epoch` if safe_triplet is True'
-        f'Received: safe_triplet={safe_triplet}, and '
-        f'samples_per_epoch={samples_per_epoch}')
-  else:
-    if not isinstance(samples_per_epoch, (int, type(None))):
-      raise ValueError(
-        f'`samples_per_epoch` should only be of type integer. '
-        f'Received type={type(samples_per_epoch)}')
-    elif (isinstance(samples_per_epoch, int) and 
-          samples_per_epoch % batch_size != 0):
-      raise ValueError(
-        f'`samples_per_epoch` must be divisible by batch_size when '
-        f'safe_triplet is True. Received samples_per_epoch={samples_per_epoch}, '
-        f'batch_size={batch_size} and safe_triplet={safe_triplet}'
-      )
-  image_paths, labels = dataset_utils.get_training_or_validation_split(
-      image_paths, labels, validation_split, subset)
-
-  if not image_paths:
-    raise ValueError(f'No images found in directory {directory}. '
-                     f'Allowed formats: {ALLOWLIST_FORMATS}')
-
-  dataset = paths_and_labels_to_dataset(
-      image_paths=image_paths,
-      image_size=image_size,
-      num_channels=num_channels,
-      labels=labels,
-      label_mode=label_mode,
-      num_classes=len(class_names),
-      interpolation=interpolation,
-      num_classes_per_batch=num_classes_per_batch,
-      num_images_per_class=num_images_per_class,
-      safe_triplet=safe_triplet,
-      seed=seed,
-      samples_per_epoch=samples_per_epoch,
-      crop_to_aspect_ratio=crop_to_aspect_ratio)
-  
-  batch_size = int(num_classes_per_batch * num_images_per_class)
-  dataset = dataset.prefetch(tf.data.AUTOTUNE).batch(batch_size)
-  # Users may need to reference `class_names`.
-  dataset.class_names = class_names
-  # Include file paths for images as attribute.
-  dataset.file_paths = image_paths
-  return dataset
-
-
-def paths_and_labels_to_dataset(image_paths,
-                                image_size,
-                                num_channels,
-                                labels,
-                                label_mode,
-                                num_classes,
-                                interpolation,
-                                num_classes_per_batch,
-                                num_images_per_class,
-                                safe_triplet,
-                                seed,
-                                samples_per_epoch,
-                                crop_to_aspect_ratio=False):
-  """Constructs a dataset of images and labels."""
-  # TODO(fchollet): consider making num_parallel_calls settable
-  
-  image_paths = np.array(image_paths)
-  labels = np.array(labels)
-  unique_labels, counts = np.unique(labels, return_counts=True)
-  num_samples = counts.sum()
-  labels_probability = counts / num_samples
-  label_indexes = [np.where(labels == label)[0] for label in unique_labels]
-  image_paths_per_label = [image_paths[idx].tolist() for idx in label_indexes]
-  labels_per_label = [labels[idx].tolist() for idx in label_indexes]
-  paths_datasets = [tf.data.Dataset.from_tensor_slices(x) 
-                    for x in image_paths_per_label]
-
-  args = (image_size, num_channels, interpolation, crop_to_aspect_ratio)
-
-  label_datasets = [dataset_utils.labels_to_dataset(
-      labels, label_mode, num_classes) for labels in labels_per_label]
-
-  if safe_triplet:
-    paths_datasets = [tf.data.Dataset.zip((path_ds, label_ds)).repeat() 
-    for (path_ds, label_ds) in zip(paths_datasets, label_datasets)]
-  else:
-    paths_datasets = [tf.data.Dataset.zip((path_ds, label_ds)) 
-    for (path_ds, label_ds) in zip(paths_datasets, label_datasets)]
-
-  if num_classes_per_batch > len(unique_labels):
-      raise ValueError(
-        f'num_classes_per_batch must be less than number of available '
-        f'classes in the dataset (or dataset split). '
-        f'Received: num_classes_per_batch={num_classes_per_batch} '
-        f'but available classes={len(unique_labels)}. '
-        f'Try reducing `num_classes_per_batch` or increasing dataset samples.'
+    if "smart_resize" in kwargs:
+        crop_to_aspect_ratio = kwargs.pop("smart_resize")
+    if kwargs:
+        raise TypeError(f"Unknown keywords argument(s): {tuple(kwargs.keys())}")
+    if labels not in ("inferred", None):
+        if not isinstance(labels, (list, tuple)):
+            raise ValueError(
+                "`labels` argument should be a list/tuple of integer labels, of "
+                "the same size as the number of image files in the target "
+                "directory. If you wish to infer the labels from the subdirectory "
+                'names in the target directory, pass `labels="inferred"`. '
+                "If you wish to get a dataset that only contains images "
+                f"(no labels), pass `labels=None`. Received: labels={labels}"
+            )
+        if class_names:
+            raise ValueError(
+                "You can only pass `class_names` if "
+                f'`labels="inferred"`. Received: labels={labels}, and '
+                f"class_names={class_names}"
+            )
+    if label_mode not in {"int", "categorical", "binary", None}:
+        raise ValueError(
+            '`label_mode` argument must be one of "int", "categorical", "binary", '
+            f"or None. Received: label_mode={label_mode}"
         )
-  choice_dataset = tf.data.Dataset.from_generator(
-      generator,
-      output_types=tf.int64,
-      args=(range(len(unique_labels)), num_classes_per_batch, 
-            num_images_per_class, labels_probability, seed))
-  balanced_path_dataset = tf.data.Dataset.choose_from_datasets(paths_datasets, 
-                                                                choice_dataset, 
-                                                                stop_on_empty_dataset=safe_triplet)
-  if safe_triplet:
-    if samples_per_epoch is None:
-      multiple = int(num_classes_per_batch * num_images_per_class)
-      x = num_samples + (multiple - 1)
-      samples_per_epoch =  x - (x % multiple)
-    balanced_path_dataset = balanced_path_dataset.take(samples_per_epoch)
-  balanced_img_dataset = balanced_path_dataset.map(
-      lambda x, y: load_image(x, y, *args))
-  if label_mode is None:
-    balanced_img_dataset = balanced_img_dataset.map(lambda x, y: x)
-  return balanced_img_dataset
+    if labels is None or label_mode is None:
+        labels = "inferred"
+        label_mode = None
+        logging.warning(
+            "Passing `labels=None` or `label_mode=None` will ignore all images "
+            "not associated with a label. If you want to generate all images "
+            "regardless of their labels please use "
+            "keras.preprocessing.image_dataset_from_directory instead."
+        )
+    if color_mode == "rgb":
+        num_channels = 3
+    elif color_mode == "rgba":
+        num_channels = 4
+    elif color_mode == "grayscale":
+        num_channels = 1
+    else:
+        raise ValueError(
+            '`color_mode` must be one of {"rgb", "rgba", "grayscale"}. '
+            f"Received: color_mode={color_mode}"
+        )
+    interpolation = image_utils.get_interpolation(interpolation)
+    dataset_utils.check_validation_split_arg(validation_split, subset, shuffle, seed)
+
+    if seed is None:
+        seed = np.random.randint(1e6)
+    image_paths, labels, class_names = dataset_utils.index_directory(
+        directory,
+        labels,
+        formats=ALLOWLIST_FORMATS,
+        class_names=class_names,
+        shuffle=shuffle,
+        seed=seed,
+        follow_links=follow_links,
+    )
+
+    if label_mode == "binary" and len(class_names) != 2:
+        raise ValueError(
+            f'When passing `label_mode="binary"`, there must be exactly 2 '
+            f"class_names. Received: class_names={class_names}"
+        )
+
+    batch_size = int(num_classes_per_batch * num_images_per_class)
+    if not safe_triplet:
+        if samples_per_epoch is not None:
+            raise ValueError(
+                f"You can only pass `samples_per_epoch` if safe_triplet is True"
+                f"Received: safe_triplet={safe_triplet}, and "
+                f"samples_per_epoch={samples_per_epoch}"
+            )
+    else:
+        if not isinstance(samples_per_epoch, (int, type(None))):
+            raise ValueError(
+                f"`samples_per_epoch` should only be of type integer. "
+                f"Received type={type(samples_per_epoch)}"
+            )
+        elif isinstance(samples_per_epoch, int) and samples_per_epoch % batch_size != 0:
+            raise ValueError(
+                f"`samples_per_epoch` must be divisible by batch_size when "
+                f"safe_triplet is True. Received samples_per_epoch={samples_per_epoch}, "
+                f"batch_size={batch_size} and safe_triplet={safe_triplet}"
+            )
+    image_paths, labels = dataset_utils.get_training_or_validation_split(
+        image_paths, labels, validation_split, subset
+    )
+
+    if not image_paths:
+        raise ValueError(
+            f"No images found in directory {directory}. "
+            f"Allowed formats: {ALLOWLIST_FORMATS}"
+        )
+
+    dataset = paths_and_labels_to_dataset(
+        image_paths=image_paths,
+        image_size=image_size,
+        num_channels=num_channels,
+        labels=labels,
+        label_mode=label_mode,
+        num_classes=len(class_names),
+        interpolation=interpolation,
+        num_classes_per_batch=num_classes_per_batch,
+        num_images_per_class=num_images_per_class,
+        safe_triplet=safe_triplet,
+        seed=seed,
+        samples_per_epoch=samples_per_epoch,
+        crop_to_aspect_ratio=crop_to_aspect_ratio,
+    )
+
+    batch_size = int(num_classes_per_batch * num_images_per_class)
+    dataset = dataset.prefetch(tf.data.AUTOTUNE).batch(batch_size)
+    # Users may need to reference `class_names`.
+    dataset.class_names = class_names
+    # Include file paths for images as attribute.
+    dataset.file_paths = image_paths
+    return dataset
 
 
-def generator(choice_indexes, 
-              num_classes_per_batch, 
-              num_images_per_class, 
-              labels_probability, 
-              seed):
-  rng = default_rng(seed=seed)
-  while True:
-    labels = rng.choice(choice_indexes,
-                            num_classes_per_batch,
-                            replace=False,
-                            p=labels_probability)
-    labels = labels.repeat(num_images_per_class)
-    for label in labels:
-        yield label
+def paths_and_labels_to_dataset(
+    image_paths,
+    image_size,
+    num_channels,
+    labels,
+    label_mode,
+    num_classes,
+    interpolation,
+    num_classes_per_batch,
+    num_images_per_class,
+    safe_triplet,
+    seed,
+    samples_per_epoch,
+    crop_to_aspect_ratio=False,
+):
+    """Constructs a dataset of images and labels."""
+    # TODO(fchollet): consider making num_parallel_calls settable
+
+    image_paths = np.array(image_paths)
+    labels = np.array(labels)
+    unique_labels, counts = np.unique(labels, return_counts=True)
+    num_samples = counts.sum()
+    labels_probability = counts / num_samples
+    label_indexes = [np.where(labels == label)[0] for label in unique_labels]
+    image_paths_per_label = [image_paths[idx].tolist() for idx in label_indexes]
+    labels_per_label = [labels[idx].tolist() for idx in label_indexes]
+    paths_datasets = [
+        tf.data.Dataset.from_tensor_slices(x) for x in image_paths_per_label
+    ]
+
+    args = (image_size, num_channels, interpolation, crop_to_aspect_ratio)
+
+    label_datasets = [
+        dataset_utils.labels_to_dataset(labels, label_mode, num_classes)
+        for labels in labels_per_label
+    ]
+
+    if safe_triplet:
+        paths_datasets = [
+            tf.data.Dataset.zip((path_ds, label_ds)).repeat()
+            for (path_ds, label_ds) in zip(paths_datasets, label_datasets)
+        ]
+    else:
+        paths_datasets = [
+            tf.data.Dataset.zip((path_ds, label_ds))
+            for (path_ds, label_ds) in zip(paths_datasets, label_datasets)
+        ]
+
+    if num_classes_per_batch > len(unique_labels):
+        raise ValueError(
+            f"num_classes_per_batch must be less than number of available "
+            f"classes in the dataset (or dataset split). "
+            f"Received: num_classes_per_batch={num_classes_per_batch} "
+            f"but available classes={len(unique_labels)}. "
+            f"Try reducing `num_classes_per_batch` or increasing dataset samples."
+        )
+    choice_dataset = tf.data.Dataset.from_generator(
+        generator,
+        output_types=tf.int64,
+        args=(
+            range(len(unique_labels)),
+            num_classes_per_batch,
+            num_images_per_class,
+            labels_probability,
+            seed,
+        ),
+    )
+    balanced_path_dataset = tf.data.Dataset.choose_from_datasets(
+        paths_datasets, choice_dataset, stop_on_empty_dataset=safe_triplet
+    )
+    if safe_triplet:
+        if samples_per_epoch is None:
+            multiple = int(num_classes_per_batch * num_images_per_class)
+            x = num_samples + (multiple - 1)
+            samples_per_epoch = x - (x % multiple)
+        balanced_path_dataset = balanced_path_dataset.take(samples_per_epoch)
+    balanced_img_dataset = balanced_path_dataset.map(
+        lambda x, y: load_image(x, y, *args)
+    )
+    if label_mode is None:
+        balanced_img_dataset = balanced_img_dataset.map(lambda x, y: x)
+    return balanced_img_dataset
 
 
-def load_image(path, label, image_size, num_channels, interpolation,
-               crop_to_aspect_ratio=False):
-  """Load an image from a path and resize it."""
-  img = tf.io.read_file(path)
-  img = tf.image.decode_image(
-      img, channels=num_channels, expand_animations=False)
-  if crop_to_aspect_ratio:
-    img = keras_image_ops.smart_resize(img, image_size,
-                                       interpolation=interpolation)
-  else:
-    img = tf.image.resize(img, image_size, method=interpolation)
-  img.set_shape((image_size[0], image_size[1], num_channels))
-  return img, label
+def generator(
+    choice_indexes,
+    num_classes_per_batch,
+    num_images_per_class,
+    labels_probability,
+    seed,
+):
+    rng = default_rng(seed=seed)
+    while True:
+        labels = rng.choice(
+            choice_indexes, num_classes_per_batch, replace=False, p=labels_probability
+        )
+        labels = labels.repeat(num_images_per_class)
+        for label in labels:
+            yield label
+
+
+def load_image(
+    path, label, image_size, num_channels, interpolation, crop_to_aspect_ratio=False
+):
+    """Load an image from a path and resize it."""
+    img = tf.io.read_file(path)
+    img = tf.image.decode_image(img, channels=num_channels, expand_animations=False)
+    if crop_to_aspect_ratio:
+        img = keras_image_ops.smart_resize(img, image_size, interpolation=interpolation)
+    else:
+        img = tf.image.resize(img, image_size, method=interpolation)
+    img.set_shape((image_size[0], image_size[1], num_channels))
+    return img, label
+
