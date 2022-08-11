@@ -66,7 +66,7 @@ Generates a balanced per batch `tf.data.Dataset` from image files in a directory
 Requirements
 ------------
 
-* Tensorflow >= 2.7
+* Tensorflow >= 2.9
 * Numpy >= 1.19
 
 Compatible with
@@ -74,6 +74,12 @@ Compatible with
 * `tf.data.Dataset` API
 * [TripletHardLoss](https://www.tensorflow.org/addons/api_docs/python/tfa/losses/TripletHardLoss)
 * [TripletSemiHardLoss](https://www.tensorflow.org/addons/api_docs/python/tfa/losses/TripletSemiHardLoss)
+
+Versions
+--------
+* v0.1.3: TF>= 2.9
+* v0.1.2: TF>= 2.8
+* v0.1.1: TF>= 2.7
 
 Licence
 -------
