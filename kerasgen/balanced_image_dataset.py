@@ -1,13 +1,10 @@
 """Keras balanced image dataset loading utilities."""
 
-import tensorflow as tf
-
-# pylint: disable=g-classes-have-attributes
-
 import numpy as np
+import tensorflow as tf
 from keras.utils import dataset_utils, image_utils
-from tensorflow.keras.preprocessing import image as keras_image_ops
 from numpy.random import default_rng
+from tensorflow.keras.preprocessing import image as keras_image_ops
 from tensorflow.python.platform import tf_logging as logging
 
 ALLOWLIST_FORMATS = (".bmp", ".gif", ".jpeg", ".jpg", ".png")
@@ -231,25 +228,28 @@ def balanced_image_dataset_from_directory(
         )
 
     batch_size = int(num_classes_per_batch * num_images_per_class)
-    if not safe_triplet:
-        if samples_per_epoch is not None:
-            raise ValueError(
-                f"You can only pass `samples_per_epoch` if safe_triplet is True"
-                f"Received: safe_triplet={safe_triplet}, and "
-                f"samples_per_epoch={samples_per_epoch}"
-            )
-    else:
+
+    if safe_triplet:
         if not isinstance(samples_per_epoch, (int, type(None))):
             raise ValueError(
                 f"`samples_per_epoch` should only be of type integer. "
                 f"Received type={type(samples_per_epoch)}"
             )
+
         elif isinstance(samples_per_epoch, int) and samples_per_epoch % batch_size != 0:
             raise ValueError(
                 f"`samples_per_epoch` must be divisible by batch_size when "
                 f"safe_triplet is True. Received samples_per_epoch={samples_per_epoch}, "
                 f"batch_size={batch_size} and safe_triplet={safe_triplet}"
             )
+
+    elif samples_per_epoch is not None:
+        raise ValueError(
+            f"You can only pass `samples_per_epoch` if safe_triplet is "
+            f"True Received: safe_triplet={safe_triplet}, and "
+            f"samples_per_epoch={samples_per_epoch}"
+        )
+
     image_paths, labels = dataset_utils.get_training_or_validation_split(
         image_paths, labels, validation_split, subset
     )
@@ -339,7 +339,7 @@ def paths_and_labels_to_dataset(
             f"classes in the dataset (or dataset split). "
             f"Received: num_classes_per_batch={num_classes_per_batch} "
             f"but available classes={len(unique_labels)}. "
-            f"Try reducing `num_classes_per_batch` or increasing dataset samples."
+            f"Try reducing `num_classes_per_batch`"
         )
     choice_dataset = tf.data.Dataset.from_generator(
         generator,
@@ -381,9 +381,8 @@ def generator(
         labels = rng.choice(
             choice_indexes, num_classes_per_batch, replace=False, p=labels_probability
         )
-        labels = labels.repeat(num_images_per_class)
-        for label in labels:
-            yield label
+
+        yield from labels.repeat(num_images_per_class)
 
 
 def load_image(
@@ -398,4 +397,3 @@ def load_image(
         img = tf.image.resize(img, image_size, method=interpolation)
     img.set_shape((image_size[0], image_size[1], num_channels))
     return img, label
-

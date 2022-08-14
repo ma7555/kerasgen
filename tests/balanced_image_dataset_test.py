@@ -1,19 +1,18 @@
 """Tests for balanced_image_dataset."""
 
-import tensorflow as tf
-
 import os
 import shutil
 
 import numpy as np
-from tensorflow.python.keras import keras_parameterized
-from tensorflow.keras.utils import array_to_img
-
+import tensorflow as tf
 from kerasgen import balanced_image_dataset
+from tensorflow.keras.utils import array_to_img
+from tensorflow.python.keras import keras_parameterized
+
 try:
     import PIL  # pylint:disable=g-import-not-at-top
 except ImportError:
-    print("Please Install Pillow")
+    print("Please Install Pillow.")
     PIL = None
 
 
@@ -62,21 +61,16 @@ class BalancedImageDatasetFromDirectoryTest(keras_parameterized.TestCase):
             for path in class_paths:
                 os.mkdir(os.path.join(temp_dir, path))
             paths += class_paths
-        i = 0
-        for img in self._get_images(color_mode=color_mode, count=count):
+        for i, img in enumerate(self._get_images(color_mode=color_mode, count=count)):
             path = paths[i % len(paths)]
-            if color_mode == "rgb":
-                ext = "jpg"
-            else:
-                ext = "png"
-            filename = os.path.join(path, "image_%s.%s" % (i, ext))
+            ext = "jpg" if color_mode == "rgb" else "png"
+            filename = os.path.join(path, f"image_{i}.{ext}")
             img.save(os.path.join(temp_dir, filename))
-            i += 1
         return temp_dir
 
     def test_balanced_image_dataset_from_directory_standalone(self):
         if PIL is None:
-            return
+            return  # Skip test if PIL is not available.
         directory = self._prepare_directory(count=7, num_classes=2)
         for i, img in enumerate(self._get_images(3)):
             filename = f"image_{i}.jpg"
@@ -170,8 +164,7 @@ class BalancedImageDatasetFromDirectoryTest(keras_parameterized.TestCase):
 
     def test_sample_count(self):
         if PIL is None:
-            return  # Skip test if PIL is not available.
-
+            return
         directory = self._prepare_directory(num_classes=4, count=15)
         dataset = balanced_image_dataset.balanced_image_dataset_from_directory(
             directory,
@@ -180,9 +173,8 @@ class BalancedImageDatasetFromDirectoryTest(keras_parameterized.TestCase):
             image_size=(18, 18),
             label_mode=None,
         )
-        sample_count = 0
-        for batch in dataset:
-            sample_count += batch.shape[0]
+
+        sample_count = sum(batch.shape[0] for batch in dataset)
         self.assertEqual(sample_count, 15)
 
     def test_balanced_image_dataset_from_directory_multiclass(self):
@@ -322,7 +314,6 @@ class BalancedImageDatasetFromDirectoryTest(keras_parameterized.TestCase):
     def test_balanced_image_dataset_from_directory_follow_links(self):
         if PIL is None:
             return  # Skip test if PIL is not available.
-
         directory = self._prepare_directory(num_classes=2, count=16, nested_dirs=True)
         dataset = balanced_image_dataset.balanced_image_dataset_from_directory(
             directory,
@@ -332,9 +323,8 @@ class BalancedImageDatasetFromDirectoryTest(keras_parameterized.TestCase):
             label_mode=None,
             follow_links=True,
         )
-        sample_count = 0
-        for batch in dataset:
-            sample_count += batch.shape[0]
+
+        sample_count = sum(batch.shape[0] for batch in dataset)
         self.assertEqual(sample_count, 16)
 
     def test_balanced_image_dataset_from_directory_no_images(self):

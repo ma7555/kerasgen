@@ -44,20 +44,17 @@ Generates a balanced per batch `tf.data.Dataset` from image files in a directory
   ......b_image_2.jpg
   ```
 
-  Behind the scenes, this API creates a different dataset for every class and by using weighted random sampling, a number of classes is drawn `(num_classes_per_batch)` and a specific number of images is selected from every choosen class `(num_images_per_class)` as long as there are enough samples from this class.
+  Behind the scenes, this module creates a different dataset for every class and by using weighted random sampling, some random classes `(num_classes_per_batch)` are drawn and a specific number of images is selected from every choosen class `(num_images_per_class)` as long as there are enough samples from this class.
 
-  If there is no enough samples remaining from the choosen class, it is skipped and another class is choosen (This behaviour can be disabled and we indefinitely repeat the datasets) 
+  If there is no enough samples remaining from the choosen class, it is skipped and another class is choosen (This behaviour can be disabled and we indefinitely repeat the classes datasets) 
   
   Setting `safe_triplet` to `False` (Default) makes sure that every image is seen exactly one time per epoch but it does not guarantee a fixed num_classes_per_batch or num_images_per_class in later batches.
 
-  Setting `safe_triplet` to `True` does not guarantee that every epoch will include all different samples from the dataset. But as sampling weighted per class, every epoch will include a very high percentage of the dataset and should approach 100% as dataset size increases. This however guarantee that both num_classes_per_batch and num_images_per_class are fixed for all batches including later ones.
-
-
+  Setting `safe_triplet` to `True` does not guarantee that every epoch will include all different samples from the dataset. But as sampling is weighted per class, every epoch will include a very high percentage of the dataset and should approach 100% as dataset size increases. This however guarantee that both num_classes_per_batch and num_images_per_class are fixed for all batches including later ones.
 
   If you are to use this generator with TripletLoss, your should either:
   * Set `safe_triplet` to `True`
   * Keep `safe_triplet` default `False` value but be careful with choosing the batch_size so you do not end up with a last batch containing a single class (or a single sample)
-
 
   Batch size is calculated by multiplying num_classes_per_batch and num_images_per_class.
 
