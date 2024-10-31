@@ -1,4 +1,5 @@
-UPDATE: This repo is archived. The task can now be done with [TFDataSampler](https://github.com/tensorflow/similarity/blob/dc506d63d05d012d3496041c25c1c54981d39565/tensorflow_similarity/samplers/tfdata_sampler.py#L135).
+### UPDATE: This repo is archived. The task can now be done with [TFDataSampler](https://github.com/tensorflow/similarity/blob/dc506d63d05d012d3496041c25c1c54981d39565/tensorflow_similarity/samplers/tfdata_sampler.py#L135).
+
 kerasgen
 ========
 [![Latest PyPI version](https://img.shields.io/pypi/v/kerasgen.svg)](https://pypi.python.org/pypi/kerasgen)
